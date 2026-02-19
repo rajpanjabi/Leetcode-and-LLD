@@ -12,11 +12,13 @@ It involves specifying the internal structure, algorithms, and data structures t
 **Steps for LLD:**
 
 - Requirements gathering (user activity, user flow from start (input) to end (output)), determine entities, actions and expected outputs
-- Break down the requirements
+- Break down the requirements, functional and non-functional requirements
 - Laying Down Use Cases
 - UML Diagrams
+- Define class structures and diagrams (classes, interfaces, methods)
 - Model Problems (Design patterns that can be used)
 - Implement Code
+- Handle edge cases
 
 
 ## Principles
@@ -148,7 +150,119 @@ Mainly 3 broad categories of design patterns:
 
 3) Behavioral: These are concerned with object interaction and responsibility — how they communicate and assign responsibilities while ensuring loose coupling. (11 subtypes)
 
-####
+### Dependency Injection
+
+In software design, a dependency refers to any object that a class needs in order to function properly.
+
+This technique allows developers to manage the relationships between various components of a system in a more flexible and efficient manner. 
+
+    Dependency Injection (DI) is a design pattern in which an object receives its dependencies from an external source rather than creating them itself.
+
+    In simple terms, instead of creating objects directly inside a class, you "inject" them from outside.
+
+```java
+class OrderService {
+    private InventoryService inventory = new InventoryService();
+    private PaymentService payment = new RazorpayPayment();
+    private NotificationService notification = new NotificationService();
+
+    public void checkout(Order order) {
+        inventory.blockItems(order);
+        payment.process(order);
+        notification.sendConfirmation(order);
+    }
+}
+```
+
+
+Here we are fixing the inventory, payment and notification service i.e whenever we want to use checkout method of the orderService class we have fixed the types of inventory, payment and notification service. 
+
+- If any of this service fails, our orderservice also fails, also if we plan to use any other serivce provider (like stripe), then we'll have to make a lot of changes in existign code (which is not a good practice). 
+
+- This violates SRP and OCP. This is also difficult for testing, i.e in unit testing, we will have to use these as is as opposed to using mock services to just chekc the functionality of orderservice.
+
+
+There are 3 main ways of using Dependency Injection:
+
+1. Constructor Injection: This is the most commonly used form of Dependency Injection. In this approach, dependencies are passed to the class via the constructor. 
+
+This ensures that the class is always instantiated with its required dependencies, which makes it easier to manage and test.
+
+Once the dependencies are injected through the constructor, they cannot be changed.
+
+
+2) Setter Injection: In Setter Injection, dependencies are passed to the class via setter methods after the object has been created. 
+
+This allows for mutable dependencies, meaning you can change the dependencies of the class at runtime. Dependencies can be set or changed at any time after the object is created, which gives more flexibility in some scenarios.
+
+One drawback is that the dependencies may not be properly set if the setter method is not called. This can lead to situations where a class is not fully initialized.
+
+3. Interface Injection: In Interface Injection, the dependency provides an injector method that will inject the dependency into the class. This type is rarely used in practice and is typically only suitable for very specific cases.
+
+Example of how to use DI:
+
+```java
+// ── Contract: defines what the client needs, not how it is done
+interface NotificationService {
+    void send(String message);
+}
+
+// ── Concrete implementation of the contract
+class EmailNotificationService implements NotificationService {
+    @Override
+    public void send(String message) {
+        System.out.println("Email sent: " + message);
+    }
+}
+
+// ── Client that depends on the abstraction, not the implementation
+class UserService {
+    // Dependency held as an interface, promoting loose coupling
+    private final NotificationService notificationService;
+
+    // Constructor Injection: forces the caller to supply the dependency up-front
+    public UserService(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
+    // Business logic uses the injected service
+    public void register(String user) {
+        System.out.println("User registered: " + user);
+        notificationService.send("Welcome " + user);
+    }
+}
+
+// ── Composition Root: the only place where “new” keywords appear
+class Main {
+    public static void main(String[] args) {
+        // Create the concrete dependency
+        NotificationService service = new EmailNotificationService();
+
+        // Inject it into the client
+        UserService userService = new UserService(service);
+
+        // Execute business operation
+        userService.register("raj");
+    }
+}
+```
+
+Key benefits of DI:
+Advantages of Dependency Injection (DI)
+Dependency Injection brings several advantages to software design. Here are the key benefits of using DI:
+
+1. Swappable Components
+Since the dependencies are injected rather than hardcoded, you can easily replace one component with another.
+For instance, switching from one payment service to another (e.g., from Razorpay to Stripe) becomes straightforward without changing the core logic of the OrderService.
+
+2. Testable with Mocks
+With DI, you can inject mock implementations of your services when running tests. This makes unit testing easier because you don't need to call external services (e.g., payment APIs or database operations). You can replace them with mock objects that simulate their behavior.
+
+3. Follows Dependency Inversion Principle (D in SOLID)
+Dependency Injection adheres to the Dependency Inversion Principle (DIP), one of the key principles of SOLID design. DIP states that high-level modules should not depend on low-level modules; both should depend on abstractions. DI enables this by allowing classes to depend on abstractions (interfaces) instead of concrete implementations.
+
+4. Open to Extension, Closed to Modification
+This is part of the Open/Closed Principle (O in SOLID), which DI supports. By injecting dependencies, your code is open to extension (e.g., adding new payment types, notification systems, etc.) without modifying existing classes. You can extend the system by simply adding new implementations, without touching the core code.
 
 
 
@@ -402,7 +516,7 @@ class Main{
 ```
 
 
-#### Managing threads, Thread Pools
+#### Managing threads, Thread Pools, Executors Framework
 
 Until now we were managing threads manually, which is risky, we dont close the threads, the process is error-prone and also very inefficient.
 
@@ -503,3 +617,405 @@ class SessionCleaner {
     }
 }
 ```
+
+
+
+#### Thread Safety
+
+Thread safety means that a piece of code, object, or method works correctly and consistently when used by multiple threads at the same time. It makes sure that no wrong result is produced and no data gets corrupted — even if many threads are accessing or changing the same thing.
+
+
+A simple real life example would be a counter, if two threads simultaneously inc the counter, there may be discrepancies.
+
+
+When two or more tasks reach for the same data at the same moment, the first one to finish “wins,” and the final result depends on sheer timing — not on logic. That timing lottery is called a race condition.
+
+
+Also counter++ is not a single operation, it consists of three tasks, reading the data, increasing it and finally writing it.
+
+
+Ways to handle this race conditions:
+
+
+1) Synchronized keyword:
+
+We just saw how two threads can clash over the same data. To stop that clash, Java offers the synchronized keyword — a built-in way to let only one thread touch a critical section at a time.
+
+When a thread enters a synchronized region, it grabs a monitor lock tied to an object (or the class itself).
+
+If the lock is available: the thread enters and safely runs the code inside.
+If the lock is already held by another thread: the thread waits (is blocked) until the lock is released.
+
+This way, only one thread at a time can execute the synchronized part, which avoids conflicts and ensures thread safety.
+
+```java
+// Entire method is protected by the instance’s monitor lock
+    public synchronized void increment() {
+        count++;          // atomic under the lock
+    }
+
+    //alternative
+    public void increment() {
+        // Lock only the code that truly needs protection
+        synchronized (lock) {
+            count++;
+        }
+    }
+```
+
+2) volatile keyword:
+
+The volatile keyword in Java is used to ensure visibility, not atomicity. It tells the JVM that a variable's value may be updated by multiple threads and that every read or write should go directly to and from main memory, rather than being cached in a thread’s local memory (CPU cache).
+
+
+1. visibility
+Any update made to a volatile variable by one thread becomes immediately visible to all other threads.
+Without volatile: one thread might keep reading an old value from its local cache.
+With volatile: all threads will always see the latest value in memory.
+
+
+volatile is best suited for scenarios where:
+One thread writes to a variable, and others only read it.
+There’s no need for atomic operations, just fresh visibility.
+
+
+
+3) Atomic variables
+
+Java provides a set of classes under the java.util.concurrent.atomic package, designed to handle common types like integers and booleans in a thread-safe, high-performance way — without using locks.
+
+All atomic classes use a technique called Compare-And-Swap (CAS) at the hardware level. This is what makes them lock-free and highly performant.
+
+CAS stands for Compare-And-Swap. It is a low-level CPU/hardware instruction that checks if a memory location holds an expected value, and if so, swaps it with a new value — all in one atomic step. Here's how it works in simple terms:
+
+“If the current value is what I expect it to be, update it with a new value. Otherwise, try again.”
+
+Common Atomic Class:
+AtomicInteger – for atomic operations on integers
+AtomicBoolean – for managing flags safely
+
+
+```java
+import java.util.concurrent.atomic.AtomicInteger;
+
+class PurchaseAtomicCounter {
+
+    // A thread-safe integer backed by hardware-level CAS
+    private final AtomicInteger likes = new AtomicInteger(0);
+
+    // Atomically add 1 to the like counter
+    public void incrementLikes() {
+        int prev, next;
+        do {
+            // Step 1  – read the current value.
+            //           (May be outdated if another thread wins the race.)
+            prev = likes.get();
+
+            // Step 2  – compute the desired next value.
+            next = prev + 1;
+
+            // Step 3  – attempt to swap: 
+            /*          “If current value is still ‘prev’, set it to ‘next’.”
+             *          Returns true on success, false if another thread
+             *          already changed the value (retry needed).
+             */
+        } while (!likes.compareAndSet(prev, next));
+    }
+
+    // Read-only accessor
+    public int getCount() {
+        return likes.get();
+    }
+}
+
+```
+Compare-And-Set is a Java-level method (like AtomicInteger.compareAndSet()) that uses the hardware CAS (compare-and-swap) under the hood to implement safe, lock-free updates.
+
+This works best for Simple counters or flags, in complex case synchronized is the way to go
+
+#### So is synchronized keyword enough??
+
+So, if we look back synchronized keyword actually locks the block or method. So one thread locks it and all the other threads are blocked.
+
+Let's consider the scenario of ticket/seat booking in bookMyShow. If a thread enters this sync block and then goes idle, no other threads can access the lock and are blocked indefinitely. 
+
+Why not just rely on synchronized?
+
+No timeout support: the lock waits forever.
+No explicit control over acquiring/releasing the lock.
+You can’t interrupt a thread stuck waiting for a lock.
+No guarantee of fairness: Some threads may wait longer than others.
+
+#### Lock vs Mutex
+
+|Lock|Mutex|
+|:-|:-|
+|General term for mutual exclusion| owners associated with lock|
+|not always enforced, locked, no guarentee if unlocked|only the thread that acquires the lock can release it|
+|synchronized keyword to use it|Reentrant lock used (like mutex)|
+|We can use another thread to unlock it programmatically|Only the thread that locked it, can unlock it|
+|Like a washroom door, anyone can access it when available|Home door, if I am the owner, I can only lock and unlock it.|
+
+
+#### Reentrant Lock
+
+Reentrant lock is a constuct used in java to achieve mutex.
+The key operations that we do using Reentrant lock are lock, trylock(time, unit), unlock, etc.
+
+When we use lock, it sees if lock is available or not, based on that it returns True or False. However, if we want to wait some time until the lock becomes available, we can use trylock(5000,ms), here we say try to acquire lock if it is in use wait for (5000ms) 5sec, if it is still not available then return False.
+
+```java
+import java.util.concurrent.locks.ReentrantLock;
+
+class TicketBooking {
+    // Number of seats initially available
+    private int availableSeats = 1;
+
+    // Dedicated lock for this shared resource
+    private final ReentrantLock lock = new ReentrantLock();
+
+    // Public method to book a ticket
+    public void bookTicket(String user) {
+        System.out.println(user + " is trying to book...");
+
+        // Acquire the lock – blocks until available
+        lock.lock();
+        try {
+            System.out.println(user + " acquired lock.");
+
+            // Critical section: check and update shared state
+            if (availableSeats > 0) {
+                System.out.println(user + " successfully booked the ticket.");
+                availableSeats--;
+            } else {
+                System.out.println(user + " could not book the ticket. No seats left.");
+            }
+        } finally {
+            // Always release the lock in a finally block
+            System.out.println(user + " is releasing the lock.");
+            lock.unlock();
+        }
+    }
+}
+
+class Main {
+    public static void main(String[] args) {
+        // Shared instance of TicketBooking
+        TicketBooking bookingSystem = new TicketBooking();
+
+        // Create two threads representing two users trying to book at the same time
+        Thread user1 = new Thread(() -> bookingSystem.bookTicket("User 1"));
+        Thread user2 = new Thread(() -> bookingSystem.bookTicket("User 2"));
+
+        // Start both threads
+        user1.start();
+        user2.start();
+
+        // Wait for both threads to finish
+        try {
+            user1.join();
+            user2.join();
+        } catch (InterruptedException e) {
+            System.out.println("Thread interrupted: " + e.getMessage());
+        }
+    }
+}
+
+```
+
+
+Ok the blocking problem seems to be solved, but what about the thread using the lock gooing idle scenario?
+
+For this case, we use a ThreadPoolScheduledExecutor(1) of size 1 and we fix a certain interval after which if the lock is not released, we release it safely.
+
+
+```java
+import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
+
+// ───────────────────────── ExpiringReentrantLock ───────────────────────── 
+
+// Lock with a built-in “auto-release after N ms” timer
+class ExpiringReentrantLock {
+    // underlying mutual-exclusion lock
+    private final ReentrantLock lock = new ReentrantLock();
+
+    // single-thread scheduler to run the expiry task
+    private final ScheduledExecutorService scheduler =
+            Executors.newSingleThreadScheduledExecutor();
+
+    // flag that tells the expiry task a timed lock is still active
+    private volatile boolean isLocked = false;
+
+    // Tries to acquire immediately; if successful, schedules auto-unlock
+    public boolean tryLockWithExpiry(long timeoutMillis) {
+
+        // attempt immediate acquisition
+        boolean acquired = lock.tryLock();
+        if (acquired) {
+            // mark as held under the timer
+            isLocked = true;
+
+            // schedule unlock after timeout
+            scheduler.schedule(() -> {
+                if (lock.isHeldByCurrentThread() || isLocked) {
+                    System.out.println("Auto-releasing lock after timeout.");
+                    unlockSafely(); // delegate to common unlock logic
+                }
+            }, timeoutMillis, TimeUnit.MILLISECONDS);
+        }
+        return acquired;
+    }
+
+    // Releases the lock either by the owner thread or the timer
+    public void unlockSafely() {
+        if (lock.isHeldByCurrentThread() || isLocked) {
+            isLocked = false; // reset timer flag
+
+            // only the owner may actually call unlock()
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+                System.out.println("Lock released.");
+            }
+        }
+    }
+
+    // Graceful shutdown for the scheduler
+    public void shutdown() {
+        scheduler.shutdownNow();
+    }
+}
+
+// ───────────────────────────── Driver code ──────────────────────────────
+
+public class Main {
+    public static void main(String[] args) {
+        // shared expiring lock
+        ExpiringReentrantLock expLock = new ExpiringReentrantLock();
+
+        /* Idle user grabs the lock, then “goes missing” for 5 s
+           (expiry timer is 3 s) */
+        Thread idleUser = new Thread(() -> {
+            if (expLock.tryLockWithExpiry(3000)) {
+                try { Thread.sleep(5000); } // simulate long idle
+                catch (InterruptedException ignored) {}
+                expLock.unlockSafely(); // in case timer fired
+            }
+        }, "IdleUser");
+
+        /* Active user starts after 1 s and keeps retrying every 1000 ms
+           until it finally books the ticket once the timer frees the lock */
+        Thread activeUser = new Thread(() -> {
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+            while (true) {
+                if (expLock.tryLockWithExpiry(3000)) {
+                    System.out.println("Active user booked!");
+                    expLock.unlockSafely();
+                    break;
+                } else {
+                    System.out.println("Active user still waiting...");
+                    try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                }
+            }
+        }, "ActiveUser");
+
+        // start threads
+        idleUser.start();
+        activeUser.start();
+
+        // wait for both to finish
+        try {
+            idleUser.join();
+            activeUser.join();
+        } catch (InterruptedException ignored) {}
+
+        // shut down scheduler
+        expLock.shutdown();
+    }
+}
+
+```
+
+#### ReadWriteLock
+
+Another variation available in Java is ReadWrite locks. Whenever there is a write operation ongoing by a thread, all threads are blocked to read or write, however in the case of read, only write threads are blocked, other read threads are allowed.
+
+ReadWriteLock solves this by giving us two independent locks:
+
+- Read lock – many threads can hold it simultaneously as long as no thread is writing.
+- Write lock – exclusive; once held, it blocks all other readers and writers.
+
+
+```java
+
+class StockPriceData{
+    private double price =100.00;
+    private final ReadWriteLock lock= new ReentrantReadWriteLock();
+
+    public void changePrice(double newPrice){
+        lock.writeLock().lock()
+        try{
+            System.out.println("Price changing to "+newPrice);
+            price=newPrice
+        }
+        finally{
+            lock.writeLock().unlock();
+        }
+       
+    }
+
+    public void readPrice(){
+        lock.readLock().lock();
+        try{
+            System.out.printf("%s read price: %.2f%n", Thread.currentThread().getName(), price);
+        }
+        finally{
+            lock.readLock().unlock();
+        }
+    }
+}
+
+```
+
+#### Semaphores
+
+What if we want a limited nos of concurrent access to shared resource. For instance we want atmost 4 users to access Netflix at a given time. For such scenarios we use Semaphores
+
+A Semaphore in Java which is a concurrency tool that maintains a fixed number of permits—like tokens. A thread must acquire a permit to proceed and release it after completing its task. If no permits are available, it either waits or fails based on the method used. This helps limit the number of threads accessing a resource at once, making it ideal for enforcing device limits, rate limiting, or managing connection pools.
+
+
+```java
+
+class NetflixAccount{
+    private final Semaphores deviceSlots;
+
+    public NetflixAccount(int maxDevices){
+        deviceSlots = new Semaphores(maxDevices);
+    }
+
+
+    public void login(String user){
+        System.out.println(user + " trying to log in...");
+        
+        if (deviceslots.tryacquire()){
+            System.out.println(user + " successfully logged in.");
+            return true;
+        } else {
+            System.out.println(user + " denied login - too many devices.");
+            return false;
+        }
+
+    }
+
+    public void logout(){
+        System.out.println(user + " logging out.");
+        deviceslots.release();
+    }
+}
+
+```
+
+#### Deadlocks
+
+A deadlock is a situation that arises in multithreaded or concurrent applications when two or more threads are permanently blocked, each waiting for the other to release a resource. In this state, none of the threads can proceed, and the system essentially freezes in that part of execution. Deadlocks are one of the most notorious problems in concurrent programming, often difficult to detect and debug.
+

@@ -4,7 +4,7 @@
     
     It is very difficult to remember the order and also only some of the parameters are actually requried, most are optional, but to create an object you need to explicitly pass all the params (null or values).
 
-To solve this one of the tricks could be to do constructor overloading, that is create multiple cosntrucotrs with different combinations of params like Burger(type, bun), Burger(type, bun, hasSide),  Burger(type, bun, hasSide, hasDrink),  Burger(type, bun, hasSide, hasDrink, hasCheese) and so on.. this is not readable and not ideal in case of more than 3-5 parameters.
+To solve this one of the tricks could be to do constructor overloading, that is create multiple cosntructors with different combinations of params like Burger(type, bun), Burger(type, bun, hasSide),  Burger(type, bun, hasSide, hasDrink),  Burger(type, bun, hasSide, hasDrink, hasCheese) and so on.. this is not readable and not ideal in case of more than 3-5 parameters.
 
 ```java
 // Telescoping Constructor Anti-Pattern

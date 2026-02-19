@@ -1,4 +1,4 @@
-Here we have an interface Notification, which is implemented by two classes SMSNotification and EmailNotification. The interface has one method send(String message) whcih is overriden by both the subclasses.
+Here we have an interface Notification, which is implemented by two classes SMSNotification and EmailNotification. The interface has one method send(String message) which is overriden by both the subclasses.
 
 Now we also have a NotificationFactory which has a public getNotification(String type) method, it takes type param and returns that type of Notification instance
 

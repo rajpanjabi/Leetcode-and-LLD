@@ -23,6 +23,30 @@ To access this static method from a subclass we do ParentClassName.staticMehtod.
 
 - A static block is loaded/executed when a class is loaded, no need for object creation.
 
+- Lambdas in java only work for Functional Interface (with only one abstract method). If more than one abstract (unimplemented) method then compiler doesn't have a clue which one to run/execute
+
+
+```java
+@FunctionalInterface
+interface Calculator {
+    int operate(int a, int b); // The ONE abstract method
+    
+    default void powerOn() {
+        System.out.println("On"); // This is fine!
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // Lambda maps directly to 'operate'
+        Calculator add = (a, b) -> a + b; 
+        System.out.println(add.operate(5, 3)); // 8
+    }
+}
+
+
+```
+
 
 ### Encapsulation
 
@@ -194,12 +218,21 @@ class Dog implements Animal {
 
 #### Interfaces
 
-Interfaces are pure contracts. They only had abstract methods and abstract final variables (constants), but after Java 8, they introduced default methods that helps in backward compatibility i.e if a new method is introduced in interface it will not break the logic of all the subclasses that implements this interface, we can add logic in this default method which can be used by all these sub-classes.
+Interfaces are pure contracts. They only had abstract methods and abstract final variables (constants), but after Java 8, they introduced default methods that helps in backward compatibility i.e if a new default method is introduced in interface it will not break the logic of all the subclasses that implements this interface, we can add logic in this default method which can be used by all these sub-classes.
 
-A class can implement multiple interfaces.
-Interfaces cannot have constructors.
-Interface can extend (inherit) from another interface. 
-All variables in an interface are implicitly public, static, and final. This means they act as constants and cannot be changed.
+**Imp diff between Concrete and Default Methods**
+
+|Method_Name|Has Body|Class attributes accesible?|Object attributes accesible?|Location|
+| :--- | :---- | :--- |:--- |:--- |
+|Default|Yes|Accessible|No, it cannot access in the interface, but if we oveeride it in the subclass then surely it can.|It is defined in interface|
+|Concrete|Yes|Accessible|Yes, it can access|They are in subclass that implements the interface|
+
+
+- A class can implement multiple interfaces.
+- Interfaces cannot have constructors.
+- Interface can extend (inherit) from another interface. 
+- All variables in an interface are implicitly public, static, and final. This means they act as constants and cannot be changed. In simple terms the attributes belong to the Interface or class not to any instance, they are final, so cannot be modified. 
+
 
 
 
