@@ -9,3 +9,5 @@ Adaptor design pattern is used when you have a class that has similar functional
 
 We create a new adaptee class that implements the gateway interface, we also add the concrete class as a dependency in this class and initialise it whenever this adaptee class's instance is created. Now in the method, we call the method of the class from the method of adaptee class.
 
+Adaptor pattern is mostly used for Payment Gateways, Logging frameworks, Cloud Providers and SDKs
+

@@ -1,5 +1,6 @@
 package structural.Adaptor;
 
-public class PaymentGateway {
+interface PaymentGateway {
+    void pay(String orderId, double amount);
     
 }
